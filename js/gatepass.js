@@ -29,17 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('destination').textContent = pass.destination;
 
     // Generate QR Code
-    // Make sure we empty the div first just in case
-    document.getElementById('qrcode').innerHTML = '';
-    
-    new QRCode(document.getElementById('qrcode'), {
-        text: pass.id,
-        width: 128,
-        height: 128,
-        colorDark : "#000000",
-        colorLight : "#ffffff",
-        correctLevel : QRCode.CorrectLevel.H
-    });
+    document.getElementById('qrcode').innerHTML = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=128x128&data=${encodeURIComponent(pass.id)}" alt="QR Code">`;
 
     // Handle PDF Export
     const downloadBtn = document.getElementById('downloadBtn');

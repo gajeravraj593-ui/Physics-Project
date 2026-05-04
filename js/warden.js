@@ -18,7 +18,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'complaints': document.getElementById('complaintsTab'),
         'food': document.getElementById('foodTab'),
         'notices': document.getElementById('noticesTab'),
-        'attendance': document.getElementById('attendanceTab')
+        'attendance': document.getElementById('attendanceTab'),
+        'fees': document.getElementById('feesTab')
     };
 
     navItems.forEach(item => {
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'complaints') renderComplaints();
             if (tabId === 'food') loadWardenFoodMenu();
             if (tabId === 'notices') renderNotices();
+            if (tabId === 'fees') renderFees();
             if (tabId === 'attendance') {
                 document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
                 loadAttendance();
@@ -485,6 +487,72 @@ document.addEventListener('DOMContentLoaded', () => {
         DB.saveAttendance(allAttendance);
         
         Utils.showToast('Attendance saved successfully!', 'success');
+    };
+
+    // --- Fees Logic ---
+    function renderFees() {
+        const tbody = document.querySelector('#wardenFeesTable tbody');
+        if (!tbody) return;
+        
+        const allUsers = DB.getUsers();
+        const students = allUsers.filter(u => u.role === 'student');
+        const allFees = DB.getFees();
+        
+        tbody.innerHTML = '';
+        
+        students.forEach(student => {
+            let feeData = allFees.find(f => f.studentId === student.id);
+            if (!feeData) {
+                // Initialize default dummy fee structure if not found
+                feeData = { studentId: student.id, totalDue: 5000, paid: 0, history: [] };
+                allFees.push(feeData);
+                DB.saveFees(allFees);
+            }
+            
+            const balance = feeData.totalDue - feeData.paid;
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><strong>${student.id}</strong></td>
+                <td>${student.name}</td>
+                <td>₹${feeData.totalDue}</td>
+                <td>₹${feeData.paid}</td>
+                <td style="color: ${balance > 0 ? 'var(--danger)' : 'var(--success)'}; font-weight: bold;">₹${balance}</td>
+                <td>
+                    <button class="btn btn-primary" onclick="openPaymentModal('${student.id}', '${student.name}', ${balance})" ${balance <= 0 ? 'disabled' : ''}>
+                        Record Payment
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.openPaymentModal = (studentId, studentName, balance) => {
+        document.getElementById('payStudentId').value = studentId;
+        document.getElementById('payStudentName').value = studentName;
+        document.getElementById('payStudentBalance').value = balance;
+        document.getElementById('payAmount').value = '';
+        document.getElementById('payAmount').max = balance;
+        document.getElementById('recordPaymentModal').classList.add('show');
+    };
+
+    window.submitPayment = (e) => {
+        e.preventDefault();
+        const studentId = document.getElementById('payStudentId').value;
+        const amount = parseInt(document.getElementById('payAmount').value, 10);
+        const method = document.getElementById('payMethod').value;
+        const balance = parseInt(document.getElementById('payStudentBalance').value, 10);
+        
+        if (amount > balance) {
+            Utils.showToast(`Cannot pay more than balance due (₹${balance})`, 'error');
+            return;
+        }
+
+        DB.updateStudentFee(studentId, amount, method);
+        Utils.showToast('Payment recorded successfully!', 'success');
+        document.getElementById('recordPaymentModal').classList.remove('show');
+        renderFees();
     };
 
     // Initial render

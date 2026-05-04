@@ -34,6 +34,9 @@
                 <a href="#" class="nav-item" data-tab="attendance">
                     <i class="ri-calendar-check-line"></i> Night Attendance
                 </a>
+                <a href="#" class="nav-item" data-tab="fees">
+                    <i class="ri-wallet-3-line"></i> Manage Fees
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="nav-item btn-block" style="background:none;border:none;text-align:left;width:100%" id="logoutBtn">
@@ -207,6 +210,33 @@
                     </div>
                 </div>
 
+                <!-- Fees Tab -->
+                <div id="feesTab" class="tab-content hidden fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1 class="page-title" style="margin: 0;">Manage Fees Status</h1>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="wardenFeesTable">
+                                <thead>
+                                    <tr>
+                                        <th>Student ID</th>
+                                        <th>Name</th>
+                                        <th>Total Due</th>
+                                        <th>Paid</th>
+                                        <th>Balance</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -254,6 +284,40 @@
                     <textarea id="noticeContent" class="form-control" rows="4" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Post Notice</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Record Payment Modal -->
+    <div class="modal-overlay" id="recordPaymentModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Record Fee Payment</h3>
+                <button class="modal-close" onclick="document.getElementById('recordPaymentModal').classList.remove('show')"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="recordPaymentForm" onsubmit="submitPayment(event)">
+                <input type="hidden" id="payStudentId">
+                <div class="form-group">
+                    <label>Student Name</label>
+                    <input type="text" id="payStudentName" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Balance Due (₹)</label>
+                    <input type="text" id="payStudentBalance" class="form-control" disabled>
+                </div>
+                <div class="form-group">
+                    <label for="payAmount">Amount to Pay (₹)</label>
+                    <input type="number" id="payAmount" class="form-control" required min="1">
+                </div>
+                <div class="form-group">
+                    <label for="payMethod">Payment Method</label>
+                    <select id="payMethod" class="form-control" required>
+                        <option value="Cash">Cash</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Record Payment</button>
             </form>
         </div>
     </div>

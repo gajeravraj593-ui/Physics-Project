@@ -27,9 +27,6 @@
                 <a href="#" class="nav-item" data-tab="food">
                     <i class="ri-restaurant-line"></i> Food Menu
                 </a>
-                <a href="#" class="nav-item" data-tab="laundry">
-                    <i class="ri-t-shirt-line"></i> Laundry
-                </a>
                 <a href="#" class="nav-item" data-tab="fees">
                     <i class="ri-wallet-3-line"></i> Fees Payment
                 </a>
@@ -134,29 +131,6 @@
                     </div>
                 </div>
 
-                <!-- Laundry Tab -->
-                <div id="laundryTab" class="tab-content hidden fade-in">
-                    <h1 class="page-title">Laundry History</h1>
-                    <div class="card">
-                        <div class="table-container">
-                            <table id="laundryTable">
-                                <thead>
-                                    <tr>
-                                        <th>ID</th>
-                                        <th>Drop Date</th>
-                                        <th>Items</th>
-                                        <th>Weight</th>
-                                        <th>Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Populated via JS -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Fees Tab -->
                 <div id="feesTab" class="tab-content hidden fade-in">
                     <h1 class="page-title">Fees & Payments</h1>
@@ -186,26 +160,7 @@
                         </div>
                     </div>
 
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-                        <div class="card">
-                            <h3 style="margin-bottom: 1.5rem;">Make a Payment</h3>
-                            <form id="paymentForm">
-                                <div class="form-group">
-                                    <label for="payAmount">Amount to Pay (₹)</label>
-                                    <input type="number" id="payAmount" class="form-control" required min="1">
-                                </div>
-                                <div class="form-group">
-                                    <label for="payMethod">Payment Method</label>
-                                    <select id="payMethod" class="form-control" required>
-                                        <option value="UPI">UPI</option>
-                                        <option value="Credit Card">Credit Card</option>
-                                        <option value="Debit Card">Debit Card</option>
-                                        <option value="Net Banking">Net Banking</option>
-                                    </select>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-block">Pay Now</button>
-                            </form>
-                        </div>
+                    <div>
                         <div class="card">
                             <h3 style="margin-bottom: 1.5rem;">Payment History</h3>
                             <div class="table-container">

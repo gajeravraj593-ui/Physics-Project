@@ -2,12 +2,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentUser = DB.getCurrentUser();
     if (!currentUser || currentUser.role !== 'student') return;
 
+    // Mobile Menu Toggle
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const sidebar = document.getElementById('sidebar');
+    if (mobileMenuBtn) {
+        mobileMenuBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('show');
+        });
+    }
+
     // Tab Navigation
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
     const tabs = {
         'dashboard': document.getElementById('dashboardTab'),
         'food': document.getElementById('foodTab'),
-        'laundry': document.getElementById('laundryTab'),
         'fees': document.getElementById('feesTab'),
         'complaints': document.getElementById('complaintsTab'),
         'notices': document.getElementById('noticesTab'),
@@ -33,7 +41,6 @@ document.addEventListener('DOMContentLoaded', () => {
             // Load data for specific tabs
             if (tabId === 'dashboard') loadRequests();
             if (tabId === 'food') loadFoodMenu();
-            if (tabId === 'laundry') loadLaundry();
             if (tabId === 'fees') loadFees();
             if (tabId === 'complaints') loadComplaints();
             if (tabId === 'notices') loadNotices();
@@ -135,28 +142,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('passModal').classList.add('show');
     };
 
-    // --- Laundry Logic ---
-    function loadLaundry() {
-        const tbody = document.querySelector('#laundryTable tbody');
-        const laundry = DB.getLaundry().filter(l => l.studentId === currentUser.id);
-        tbody.innerHTML = '';
-        laundry.forEach(item => {
-            const tr = document.createElement('tr');
-            let badgeClass = item.status === 'Ready' || item.status === 'Delivered' ? 'badge-approved' : 'badge-pending';
-            tr.innerHTML = `
-                <td>${item.id}</td>
-                <td>${Utils.formatDate(item.date)}</td>
-                <td>${item.items}</td>
-                <td>${item.weight}</td>
-                <td><span class="badge ${badgeClass}">${item.status}</span></td>
-            `;
-            tbody.appendChild(tr);
-        });
-        if (laundry.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No laundry history.</td></tr>';
-        }
-    }
-
     // --- Fees Logic ---
     function loadFees() {
         const allFees = DB.getFees();
@@ -186,29 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (history.length === 0) {
             tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No payments made yet.</td></tr>';
         }
-    }
-
-    const paymentForm = document.getElementById('paymentForm');
-    if (paymentForm) {
-        paymentForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const amount = parseInt(document.getElementById('payAmount').value, 10);
-            const method = document.getElementById('payMethod').value;
-            
-            const allFees = DB.getFees();
-            let myFees = allFees.find(f => f.studentId === currentUser.id);
-            const balance = myFees.totalDue - myFees.paid;
-
-            if (amount > balance) {
-                Utils.showToast(`Cannot pay more than balance due (₹${balance})`, 'error');
-                return;
-            }
-
-            DB.updateStudentFee(currentUser.id, amount, method);
-            Utils.showToast('Payment successful!', 'success');
-            paymentForm.reset();
-            loadFees();
-        });
     }
 
     // --- Complaints Logic ---

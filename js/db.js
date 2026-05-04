@@ -5,7 +5,6 @@ const DB_KEYS = {
     THEME: 'gatepass_theme',
     COMPLAINTS: 'hostel_complaints',
     FEES: 'hostel_fees',
-    LAUNDRY: 'hostel_laundry',
     FOOD_MENU: 'hostel_food_menu',
     NOTICES: 'hostel_notices',
     ATTENDANCE: 'hostel_attendance',
@@ -41,13 +40,6 @@ const DB = {
                 { studentId: 'S002', totalDue: 5000, paid: 5000, history: [{ date: new Date().toISOString(), amount: 5000, method: 'UPI' }] }
             ];
             localStorage.setItem(DB_KEYS.FEES, JSON.stringify(dummyFees));
-        }
-        if (!localStorage.getItem(DB_KEYS.LAUNDRY)) {
-            const dummyLaundry = [
-                { id: 'L-123', studentId: 'S001', date: new Date().toISOString(), items: 5, weight: '2.5kg', status: 'Ready' },
-                { id: 'L-124', studentId: 'S001', date: new Date(Date.now() - 86400000).toISOString(), items: 3, weight: '1kg', status: 'Delivered' }
-            ];
-            localStorage.setItem(DB_KEYS.LAUNDRY, JSON.stringify(dummyLaundry));
         }
         if (!localStorage.getItem(DB_KEYS.FOOD_MENU)) {
             const dummyFoodMenu = {
@@ -147,9 +139,6 @@ const DB = {
             DB.saveFees(fees);
         }
     },
-
-    // Laundry
-    getLaundry: () => JSON.parse(localStorage.getItem(DB_KEYS.LAUNDRY) || '[]'),
 
     // Food Menu
     getFoodMenu: () => JSON.parse(localStorage.getItem(DB_KEYS.FOOD_MENU) || '{}'),
