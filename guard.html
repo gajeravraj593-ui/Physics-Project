@@ -10,6 +10,8 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/components.css">
     <link rel="stylesheet" href="css/dashboard.css">
+    <!-- HTML5 QR Code Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
 </head>
 
 <body>
@@ -67,6 +69,14 @@
                         <p style="color: var(--text-secondary); margin-bottom: 2rem;">scan QR code or enter the Pass ID
                             manually to
                             verify and log entry.</p>
+
+                        <div style="margin-bottom: 1.5rem;">
+                            <button type="button" class="btn btn-outline" id="toggleScannerBtn">
+                                <i class="ri-camera-lens-line"></i> Start Camera Scanner
+                            </button>
+                        </div>
+                        
+                        <div id="qr-reader" style="width: 100%; max-width: 400px; margin: 0 auto 1.5rem auto; display: none; overflow: hidden; border-radius: var(--radius); border: 1px solid var(--border-color);"></div>
 
                         <form id="verifyForm" style="display: flex; gap: 1rem; max-width: 400px; margin: 0 auto;">
                             <input type="text" id="passIdInput" class="form-control"

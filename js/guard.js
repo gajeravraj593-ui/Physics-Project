@@ -61,6 +61,67 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- QR Scanner Logic ---
+    let html5QrcodeScanner = null;
+    let isScanning = false;
+    const toggleScannerBtn = document.getElementById('toggleScannerBtn');
+    const qrReaderDiv = document.getElementById('qr-reader');
+
+    if (toggleScannerBtn && typeof Html5QrcodeScanner !== 'undefined') {
+        toggleScannerBtn.addEventListener('click', () => {
+            if (isScanning) {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().then(() => {
+                        isScanning = false;
+                        qrReaderDiv.style.display = 'none';
+                        toggleScannerBtn.innerHTML = '<i class="ri-camera-lens-line"></i> Start Camera Scanner';
+                        toggleScannerBtn.classList.remove('btn-danger');
+                        toggleScannerBtn.classList.add('btn-outline');
+                    }).catch(error => {
+                        console.error('Failed to clear scanner.', error);
+                    });
+                }
+            } else {
+                qrReaderDiv.style.display = 'block';
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "qr-reader",
+                    { fps: 10, qrbox: {width: 250, height: 250} },
+                    /* verbose= */ false
+                );
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                isScanning = true;
+                toggleScannerBtn.innerHTML = '<i class="ri-close-line"></i> Stop Scanner';
+                toggleScannerBtn.classList.remove('btn-outline');
+                toggleScannerBtn.classList.add('btn-danger');
+            }
+        });
+    }
+
+    function onScanSuccess(decodedText, decodedResult) {
+        // Set the input
+        document.getElementById('passIdInput').value = decodedText;
+        
+        // Stop scanning
+        if (html5QrcodeScanner) {
+            html5QrcodeScanner.clear().then(() => {
+                isScanning = false;
+                qrReaderDiv.style.display = 'none';
+                toggleScannerBtn.innerHTML = '<i class="ri-camera-lens-line"></i> Start Camera Scanner';
+                toggleScannerBtn.classList.remove('btn-danger');
+                toggleScannerBtn.classList.add('btn-outline');
+            });
+        }
+        
+        // Auto submit to verify
+        if (verifyForm) {
+            verifyForm.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+        }
+    }
+
+    function onScanFailure(error) {
+        // Ignore failures as it just means no QR code is in frame yet
+    }
+
     function renderVerificationCard(pass) {
         verifyResult.classList.remove('hidden');
 
