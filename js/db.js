@@ -6,7 +6,10 @@ const DB_KEYS = {
     COMPLAINTS: 'hostel_complaints',
     FEES: 'hostel_fees',
     LAUNDRY: 'hostel_laundry',
-    FOOD_MENU: 'hostel_food_menu'
+    FOOD_MENU: 'hostel_food_menu',
+    NOTICES: 'hostel_notices',
+    ATTENDANCE: 'hostel_attendance',
+    NOTIFICATIONS: 'hostel_notifications'
 };
 
 // Initial Dummy Data
@@ -57,6 +60,18 @@ const DB = {
                 sunday: { breakfast: 'Bread Omelet/Jam', lunch: 'Special Thali', dinner: 'Noodles & Soup' }
             };
             localStorage.setItem(DB_KEYS.FOOD_MENU, JSON.stringify(dummyFoodMenu));
+        }
+        if (!localStorage.getItem(DB_KEYS.NOTICES)) {
+            const dummyNotices = [
+                { id: 'N-001', title: 'Water Supply Issue', content: 'Water supply will be interrupted tomorrow from 10 AM to 12 PM due to maintenance.', date: new Date().toISOString(), author: 'W001' }
+            ];
+            localStorage.setItem(DB_KEYS.NOTICES, JSON.stringify(dummyNotices));
+        }
+        if (!localStorage.getItem(DB_KEYS.ATTENDANCE)) {
+            localStorage.setItem(DB_KEYS.ATTENDANCE, JSON.stringify([]));
+        }
+        if (!localStorage.getItem(DB_KEYS.NOTIFICATIONS)) {
+            localStorage.setItem(DB_KEYS.NOTIFICATIONS, JSON.stringify([]));
         }
     },
     
@@ -139,6 +154,52 @@ const DB = {
     // Food Menu
     getFoodMenu: () => JSON.parse(localStorage.getItem(DB_KEYS.FOOD_MENU) || '{}'),
     saveFoodMenu: (menu) => localStorage.setItem(DB_KEYS.FOOD_MENU, JSON.stringify(menu)),
+
+    // Notices
+    getNotices: () => JSON.parse(localStorage.getItem(DB_KEYS.NOTICES) || '[]'),
+    saveNotices: (notices) => localStorage.setItem(DB_KEYS.NOTICES, JSON.stringify(notices)),
+    addNotice: (notice) => {
+        const notices = DB.getNotices();
+        notices.push(notice);
+        DB.saveNotices(notices);
+    },
+    deleteNotice: (id) => {
+        const notices = DB.getNotices();
+        DB.saveNotices(notices.filter(n => n.id !== id));
+    },
+
+    // Attendance
+    getAttendance: () => JSON.parse(localStorage.getItem(DB_KEYS.ATTENDANCE) || '[]'),
+    saveAttendance: (attendance) => localStorage.setItem(DB_KEYS.ATTENDANCE, JSON.stringify(attendance)),
+    addAttendanceRecord: (record) => {
+        const attendance = DB.getAttendance();
+        attendance.push(record);
+        DB.saveAttendance(attendance);
+    },
+
+    // Notifications
+    getNotifications: (userId) => {
+        const all = JSON.parse(localStorage.getItem(DB_KEYS.NOTIFICATIONS) || '[]');
+        return all.filter(n => n.userId === userId).sort((a,b) => new Date(b.date) - new Date(a.date));
+    },
+    addNotification: (notification) => {
+        const notifications = JSON.parse(localStorage.getItem(DB_KEYS.NOTIFICATIONS) || '[]');
+        notifications.push({
+            id: 'NOTIF-' + Date.now(),
+            date: new Date().toISOString(),
+            read: false,
+            ...notification
+        });
+        localStorage.setItem(DB_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+    },
+    markNotificationRead: (id) => {
+        const notifications = JSON.parse(localStorage.getItem(DB_KEYS.NOTIFICATIONS) || '[]');
+        const n = notifications.find(n => n.id === id);
+        if (n) {
+            n.read = true;
+            localStorage.setItem(DB_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+        }
+    },
 
     getCurrentUser: () => {
         const userStr = localStorage.getItem(DB_KEYS.SESSION);

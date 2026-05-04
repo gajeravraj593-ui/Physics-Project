@@ -9,7 +9,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'food': document.getElementById('foodTab'),
         'laundry': document.getElementById('laundryTab'),
         'fees': document.getElementById('feesTab'),
-        'complaints': document.getElementById('complaintsTab')
+        'complaints': document.getElementById('complaintsTab'),
+        'notices': document.getElementById('noticesTab'),
+        'attendance': document.getElementById('attendanceTab')
     };
 
     navItems.forEach(item => {
@@ -34,6 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'laundry') loadLaundry();
             if (tabId === 'fees') loadFees();
             if (tabId === 'complaints') loadComplaints();
+            if (tabId === 'notices') loadNotices();
+            if (tabId === 'attendance') loadAttendance();
         });
     });
 
@@ -286,7 +290,95 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // --- Notices Logic ---
+    function loadNotices() {
+        const container = document.getElementById('studentNoticesContainer');
+        if (!container) return;
+
+        const notices = DB.getNotices().sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        if (notices.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No notices posted yet.</div>';
+            return;
+        }
+
+        container.innerHTML = notices.map(notice => `
+            <div class="card" style="padding: 1rem;">
+                <h3 style="margin-top: 0; margin-bottom: 0.5rem;">${notice.title}</h3>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">${Utils.formatDate(notice.date)}</div>
+                <p style="margin: 0; white-space: pre-wrap;">${notice.content}</p>
+            </div>
+        `).join('');
+    }
+
+    // --- Attendance Logic ---
+    function loadAttendance() {
+        const tbody = document.querySelector('#studentAttendanceTable tbody');
+        if (!tbody) return;
+
+        const allAttendance = DB.getAttendance().sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        tbody.innerHTML = '';
+        let hasRecords = false;
+
+        allAttendance.forEach(record => {
+            if (record.records.hasOwnProperty(currentUser.id)) {
+                hasRecords = true;
+                const isPresent = record.records[currentUser.id];
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${Utils.formatDate(record.date)}</td>
+                    <td><span class="badge ${isPresent ? 'badge-approved' : 'badge-rejected'}">${isPresent ? 'Present' : 'Absent'}</span></td>
+                `;
+                tbody.appendChild(tr);
+            }
+        });
+
+        if (!hasRecords) {
+            tbody.innerHTML = '<tr><td colspan="2" style="text-align:center;">No attendance records found.</td></tr>';
+        }
+    }
+
+    // --- Notifications Logic ---
+    function loadNotifications() {
+        const container = document.getElementById('notificationsContainer');
+        const badge = document.getElementById('notifBadge');
+        if (!container || !badge) return;
+
+        const notifications = DB.getNotifications(currentUser.id);
+        const unreadCount = notifications.filter(n => !n.read).length;
+
+        if (unreadCount > 0) {
+            badge.textContent = unreadCount;
+            badge.style.display = 'flex';
+        } else {
+            badge.style.display = 'none';
+        }
+
+        if (notifications.length === 0) {
+            container.innerHTML = '<div style="text-align:center; color:var(--text-secondary);">No notifications</div>';
+            return;
+        }
+
+        container.innerHTML = notifications.map(n => `
+            <div style="padding: 1rem; background: ${n.read ? 'var(--bg-main)' : 'rgba(79, 70, 229, 0.1)'}; border-radius: var(--radius); border-left: 3px solid ${n.read ? 'transparent' : 'var(--primary)'};">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <strong style="display:block; margin-bottom:0.25rem;">${n.title}</strong>
+                    ${!n.read ? `<button class="btn btn-outline" style="padding:0.1rem 0.3rem; font-size:0.6rem;" onclick="markNotificationRead('${n.id}')">Mark Read</button>` : ''}
+                </div>
+                <div style="font-size:0.875rem;">${n.message}</div>
+                <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:0.5rem;">${Utils.formatDate(n.date)}</div>
+            </div>
+        `).join('');
+    }
+
+    window.markNotificationRead = (id) => {
+        DB.markNotificationRead(id);
+        loadNotifications();
+    };
+
     // Initial load
     loadRequests();
     loadFoodMenu();
+    loadNotifications();
 });

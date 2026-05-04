@@ -16,7 +16,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const tabs = {
         'dashboard': document.getElementById('dashboardTab'),
         'complaints': document.getElementById('complaintsTab'),
-        'food': document.getElementById('foodTab')
+        'food': document.getElementById('foodTab'),
+        'notices': document.getElementById('noticesTab'),
+        'attendance': document.getElementById('attendanceTab')
     };
 
     navItems.forEach(item => {
@@ -38,6 +40,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'dashboard') renderRequests();
             if (tabId === 'complaints') renderComplaints();
             if (tabId === 'food') loadWardenFoodMenu();
+            if (tabId === 'notices') renderNotices();
+            if (tabId === 'attendance') {
+                document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+                loadAttendance();
+            }
         });
     });
 
@@ -166,6 +173,15 @@ document.addEventListener('DOMContentLoaded', () => {
         pass.remarks = remarksInput ? remarksInput.value.trim() : '';
 
         DB.updatePass(pass);
+
+        // Notify student
+        DB.addNotification({
+            userId: pass.studentId,
+            title: `Gatepass ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            message: `Your gatepass request for ${pass.destination} has been ${status}.`,
+            type: status === 'approved' ? 'success' : 'error'
+        });
+
         Utils.showToast(`Pass request ${status}!`, status === 'approved' ? 'success' : 'error');
         closeModal('reviewModal');
         renderRequests();
@@ -268,6 +284,15 @@ document.addEventListener('DOMContentLoaded', () => {
             cmp.status = 'Resolved';
             cmp.remarks = remarksInput ? remarksInput.value.trim() : '';
             DB.updateComplaint(cmp);
+
+            // Notify student
+            DB.addNotification({
+                userId: cmp.studentId,
+                title: 'Complaint Resolved',
+                message: `Your complaint regarding "${cmp.title}" has been resolved.`,
+                type: 'success'
+            });
+
             Utils.showToast('Complaint resolved!', 'success');
         }
         
@@ -323,6 +348,143 @@ document.addEventListener('DOMContentLoaded', () => {
 
         DB.saveFoodMenu(newMenu);
         Utils.showToast('Food Menu updated successfully!', 'success');
+    };
+
+    // --- Notice Board Logic ---
+    function renderNotices() {
+        const container = document.getElementById('wardenNoticesContainer');
+        if (!container) return;
+
+        const notices = DB.getNotices().sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        if (notices.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 2rem; color: var(--text-secondary);">No notices posted yet.</div>';
+            return;
+        }
+
+        container.innerHTML = notices.map(notice => `
+            <div class="card" style="padding: 1rem; position: relative;">
+                <button class="btn btn-danger" style="position: absolute; top: 1rem; right: 1rem; padding: 0.25rem 0.5rem;" onclick="deleteNotice('${notice.id}')"><i class="ri-delete-bin-line"></i></button>
+                <h3 style="margin-top: 0; margin-bottom: 0.5rem; padding-right: 2rem;">${notice.title}</h3>
+                <div style="font-size: 0.75rem; color: var(--text-secondary); margin-bottom: 0.5rem;">${Utils.formatDate(notice.date)}</div>
+                <p style="margin: 0; white-space: pre-wrap;">${notice.content}</p>
+            </div>
+        `).join('');
+    }
+
+    window.postNotice = (e) => {
+        e.preventDefault();
+        const title = document.getElementById('noticeTitle').value.trim();
+        const content = document.getElementById('noticeContent').value.trim();
+        if (!title || !content) return;
+
+        DB.addNotice({
+            id: 'N-' + Date.now(),
+            title,
+            content,
+            date: new Date().toISOString(),
+            author: currentUser.id
+        });
+
+        // Notify all students
+        const users = DB.getUsers().filter(u => u.role === 'student');
+        users.forEach(u => {
+            DB.addNotification({
+                userId: u.id,
+                title: 'New Notice',
+                message: title,
+                type: 'info'
+            });
+        });
+
+        Utils.showToast('Notice posted successfully!', 'success');
+        document.getElementById('newNoticeForm').reset();
+        closeModal('newNoticeModal');
+        renderNotices();
+    };
+
+    window.deleteNotice = (id) => {
+        if (!confirm('Are you sure you want to delete this notice?')) return;
+        DB.deleteNotice(id);
+        Utils.showToast('Notice deleted.', 'info');
+        renderNotices();
+    };
+
+    // --- Night Attendance Logic ---
+    window.loadAttendance = () => {
+        const dateInput = document.getElementById('attendanceDate').value;
+        if (!dateInput) return;
+        
+        const tbody = document.querySelector('#attendanceTable tbody');
+        if (!tbody) return;
+
+        const students = DB.getUsers().filter(u => u.role === 'student');
+        const allAttendance = DB.getAttendance();
+        const record = allAttendance.find(r => r.date === dateInput) || { date: dateInput, records: {} };
+
+        tbody.innerHTML = students.map(student => {
+            const isPresent = record.records[student.id] !== false; // default true if not marked absent
+            return `
+                <tr data-student-id="${student.id}">
+                    <td>${student.id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.room || 'N/A'}</td>
+                    <td>
+                        <span class="badge ${isPresent ? 'badge-approved' : 'badge-rejected'} status-badge">
+                            ${isPresent ? 'Present' : 'Absent'}
+                        </span>
+                    </td>
+                    <td>
+                        <button class="btn ${isPresent ? 'btn-danger' : 'btn-success'} toggle-btn" style="padding: 0.25rem 0.5rem;" onclick="toggleAttendance(this)">
+                            Mark ${isPresent ? 'Absent' : 'Present'}
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    };
+
+    window.toggleAttendance = (btn) => {
+        const tr = btn.closest('tr');
+        const badge = tr.querySelector('.status-badge');
+        
+        const isCurrentlyPresent = badge.textContent.trim() === 'Present';
+        const newStatus = isCurrentlyPresent ? 'Absent' : 'Present';
+        
+        badge.textContent = newStatus;
+        badge.className = `badge ${isCurrentlyPresent ? 'badge-rejected' : 'badge-approved'} status-badge`;
+        
+        btn.textContent = `Mark ${isCurrentlyPresent ? 'Present' : 'Absent'}`;
+        btn.className = `btn ${isCurrentlyPresent ? 'btn-success' : 'btn-danger'} toggle-btn`;
+    };
+
+    window.saveAttendance = () => {
+        const dateInput = document.getElementById('attendanceDate').value;
+        if (!dateInput) {
+            Utils.showToast('Please select a date first.', 'error');
+            return;
+        }
+
+        const tbody = document.querySelector('#attendanceTable tbody');
+        const rows = tbody.querySelectorAll('tr');
+        
+        const record = { date: dateInput, records: {} };
+        rows.forEach(tr => {
+            const studentId = tr.getAttribute('data-student-id');
+            const isPresent = tr.querySelector('.status-badge').textContent.trim() === 'Present';
+            record.records[studentId] = isPresent;
+        });
+
+        let allAttendance = DB.getAttendance();
+        const existingIndex = allAttendance.findIndex(r => r.date === dateInput);
+        if (existingIndex !== -1) {
+            allAttendance[existingIndex] = record;
+        } else {
+            allAttendance.push(record);
+        }
+        DB.saveAttendance(allAttendance);
+        
+        Utils.showToast('Attendance saved successfully!', 'success');
     };
 
     // Initial render
