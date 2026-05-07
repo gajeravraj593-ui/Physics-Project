@@ -31,6 +31,14 @@
                     <i class="ri-user-add-line"></i>
                     Visitor Log
                 </a>
+                <a href="#" class="nav-item" data-tab="parcels">
+                    <i class="ri-inbox-archive-line"></i>
+                    Parcel Desk
+                </a>
+                <a href="#" class="nav-item" data-tab="lostfound">
+                    <i class="ri-search-eye-line"></i>
+                    Lost & Found
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="nav-item btn-block" style="background:none;border:none;text-align:left;width:100%"
@@ -128,6 +136,56 @@
                     </div>
                 </div>
 
+                <!-- Parcels Tab -->
+                <div id="parcelsTab" class="tab-content hidden fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1 class="page-title" style="margin: 0;">Parcel Desk</h1>
+                        <button class="btn btn-primary" onclick="document.getElementById('newParcelModal').classList.add('show')">
+                            <i class="ri-add-line"></i> Log Parcel
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="parcelsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Tracking No.</th>
+                                        <th>Courier</th>
+                                        <th>Student</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                            <div id="noParcelsMsg" style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                                No pending parcels.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lost & Found Tab -->
+                <div id="lostfoundTab" class="tab-content hidden fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1 class="page-title" style="margin: 0;">Lost & Found Board</h1>
+                        <button class="btn btn-primary" onclick="document.getElementById('newLostFoundModal').classList.add('show')">
+                            <i class="ri-add-line"></i> Report Item
+                        </button>
+                    </div>
+
+                    <div id="lostFoundContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                        <!-- Populated via JS -->
+                    </div>
+                    <div id="noLostFoundMsg" style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none; width: 100%;">
+                        No items reported.
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
@@ -153,6 +211,63 @@
                     <input type="text" id="visitorPurpose" class="form-control" required>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Log Entry</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- New Parcel Modal -->
+    <div class="modal-overlay" id="newParcelModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Log Incoming Parcel</h3>
+                <button class="modal-close" onclick="document.getElementById('newParcelModal').classList.remove('show')"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="newParcelForm">
+                <div class="form-group">
+                    <label for="parcelTracking">Tracking Number / ID</label>
+                    <input type="text" id="parcelTracking" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="parcelCourier">Courier Service (Amazon, Flipkart, etc.)</label>
+                    <input type="text" id="parcelCourier" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="parcelStudent">Student ID</label>
+                    <input type="text" id="parcelStudent" class="form-control" placeholder="e.g. S001" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Log Parcel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lost & Found Modal -->
+    <div class="modal-overlay" id="newLostFoundModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Report Lost / Found Item</h3>
+                <button class="modal-close" onclick="document.getElementById('newLostFoundModal').classList.remove('show')"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="newLostFoundForm">
+                <div class="form-group">
+                    <label for="lfType">Type</label>
+                    <select id="lfType" class="form-control" required>
+                        <option value="Lost">I Lost Something</option>
+                        <option value="Found">I Found Something</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="lfItem">Item Name</label>
+                    <input type="text" id="lfItem" class="form-control" placeholder="e.g. Blue Umbrella, Keys" required>
+                </div>
+                <div class="form-group">
+                    <label for="lfLocation">Location Lost/Found</label>
+                    <input type="text" id="lfLocation" class="form-control" placeholder="e.g. Near Mess, Main Gate" required>
+                </div>
+                <div class="form-group">
+                    <label for="lfDesc">Description / Contact Info</label>
+                    <textarea id="lfDesc" class="form-control" rows="3" required placeholder="Provide details to identify the item..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
             </form>
         </div>
     </div>

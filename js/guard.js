@@ -15,7 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
     const tabs = {
         'verify': document.getElementById('verifyTab'),
-        'visitors': document.getElementById('visitorsTab')
+        'visitors': document.getElementById('visitorsTab'),
+        'parcels': document.getElementById('parcelsTab'),
+        'lostfound': document.getElementById('lostfoundTab')
     };
 
     navItems.forEach(item => {
@@ -37,6 +39,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (tabId === 'visitors') renderVisitors();
+            if (tabId === 'parcels') renderParcels();
+            if (tabId === 'lostfound') renderLostFound();
         });
     });
 
@@ -280,6 +284,194 @@ document.addEventListener('DOMContentLoaded', () => {
             DB.updateVisitor(v);
             Utils.showToast(`${v.name} marked OUT.`, 'success');
             renderVisitors();
+        }
+    };
+
+    // --- Parcel Logic ---
+    const newParcelForm = document.getElementById('newParcelForm');
+    if (newParcelForm) {
+        newParcelForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const trackingNo = document.getElementById('parcelTracking').value.trim();
+            const courier = document.getElementById('parcelCourier').value.trim();
+            const studentId = document.getElementById('parcelStudent').value.trim();
+
+            if (!trackingNo || !courier || !studentId) return;
+
+            const newParcel = {
+                id: 'PRC-' + Date.now(),
+                trackingNo,
+                courier,
+                studentId,
+                dateReceived: new Date().toISOString(),
+                status: 'Received at Gate',
+                dateDelivered: null
+            };
+
+            DB.addParcel(newParcel);
+            
+            DB.addNotification({
+                userId: studentId,
+                title: 'Parcel Arrived',
+                message: `A package from ${courier} (Tracking: ${trackingNo}) is waiting for you at the gate.`,
+                type: 'info'
+            });
+
+            Utils.showToast('Parcel logged successfully!', 'success');
+            newParcelForm.reset();
+            document.getElementById('newParcelModal').classList.remove('show');
+            renderParcels();
+        });
+    }
+
+    function renderParcels() {
+        const tbody = document.querySelector('#parcelsTable tbody');
+        const noDataMsg = document.getElementById('noParcelsMsg');
+        if (!tbody) return;
+
+        let parcels = DB.getParcels();
+        parcels.sort((a, b) => new Date(b.dateReceived) - new Date(a.dateReceived));
+
+        tbody.innerHTML = '';
+        if (parcels.length === 0) {
+            noDataMsg.style.display = 'block';
+            document.getElementById('parcelsTable').style.display = 'none';
+            return;
+        }
+
+        noDataMsg.style.display = 'none';
+        document.getElementById('parcelsTable').style.display = 'table';
+
+        parcels.forEach(p => {
+            const tr = document.createElement('tr');
+            let actionHtml = '';
+            let badgeClass = p.status === 'Delivered' ? 'badge-success' : 'badge-pending';
+            
+            if (p.status !== 'Delivered') {
+                actionHtml = `<button class="btn btn-success" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="markParcelDelivered('${p.id}')">Mark Delivered</button>`;
+            } else {
+                actionHtml = `<span style="font-size:0.875rem; color:var(--text-secondary)">${Utils.formatDate(p.dateDelivered)}</span>`;
+            }
+
+            tr.innerHTML = `
+                <td>${Utils.formatDate(p.dateReceived)}</td>
+                <td><strong>${p.trackingNo}</strong></td>
+                <td>${p.courier}</td>
+                <td>${p.studentId}</td>
+                <td><span class="badge ${badgeClass}">${p.status}</span></td>
+                <td>${actionHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.markParcelDelivered = (id) => {
+        const parcels = DB.getParcels();
+        const p = parcels.find(x => x.id === id);
+        if (p) {
+            p.status = 'Delivered';
+            p.dateDelivered = new Date().toISOString();
+            DB.updateParcel(p);
+
+            DB.addNotification({
+                userId: p.studentId,
+                title: 'Parcel Delivered',
+                message: `Your parcel from ${p.courier} has been picked up.`,
+                type: 'success'
+            });
+
+            Utils.showToast('Parcel marked as Delivered.', 'success');
+            renderParcels();
+        }
+    };
+
+    // --- Lost & Found Logic (Shared across roles, implemented here for Guard) ---
+    const newLostFoundForm = document.getElementById('newLostFoundForm');
+    if (newLostFoundForm) {
+        newLostFoundForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const type = document.getElementById('lfType').value;
+            const item = document.getElementById('lfItem').value.trim();
+            const location = document.getElementById('lfLocation').value.trim();
+            const description = document.getElementById('lfDesc').value.trim();
+
+            if (!item || !location || !description) return;
+
+            const report = {
+                id: 'LF-' + Date.now(),
+                type,
+                item,
+                location,
+                description,
+                dateReported: new Date().toISOString(),
+                status: 'Active',
+                authorRole: currentUser.role,
+                authorId: currentUser.id,
+                authorName: currentUser.name
+            };
+
+            DB.addLostFound(report);
+            Utils.showToast(`Item reported as ${type}!`, 'success');
+            newLostFoundForm.reset();
+            document.getElementById('newLostFoundModal').classList.remove('show');
+            renderLostFound();
+        });
+    }
+
+    function renderLostFound() {
+        const container = document.getElementById('lostFoundContainer');
+        const noDataMsg = document.getElementById('noLostFoundMsg');
+        if (!container) return;
+
+        let items = DB.getLostFound();
+        items.sort((a, b) => new Date(b.dateReported) - new Date(a.dateReported));
+
+        container.innerHTML = '';
+        if (items.length === 0) {
+            noDataMsg.style.display = 'block';
+            return;
+        }
+
+        noDataMsg.style.display = 'none';
+
+        items.forEach(lf => {
+            let badgeClass = lf.type === 'Lost' ? 'badge-rejected' : 'badge-success';
+            if (lf.status === 'Resolved') badgeClass = 'badge-pending'; // Grayed out somewhat
+            
+            const actionHtml = (lf.status === 'Active' && (lf.authorId === currentUser.id || currentUser.role === 'warden')) 
+                ? `<button class="btn btn-outline" style="width:100%; margin-top:1rem; padding:0.5rem;" onclick="resolveLostFound('${lf.id}')">Mark as Resolved</button>` 
+                : '';
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.opacity = lf.status === 'Resolved' ? '0.7' : '1';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                    <span class="badge ${badgeClass}">${lf.type}</span>
+                    <span style="font-size:0.75rem; color:var(--text-secondary);">${Utils.formatDate(lf.dateReported)}</span>
+                </div>
+                <h3 style="margin-top:0; margin-bottom:0.25rem;">${lf.item}</h3>
+                <div style="font-size:0.875rem; margin-bottom:0.5rem; color:var(--text-secondary);">
+                    <i class="ri-map-pin-line"></i> ${lf.location}
+                </div>
+                <p style="font-size:0.875rem; margin-bottom:1rem; flex-grow:1;">${lf.description}</p>
+                <div style="font-size:0.75rem; color:var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                    Reported by: ${lf.authorName} (${lf.authorRole})
+                </div>
+                ${actionHtml}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    window.resolveLostFound = (id) => {
+        const items = DB.getLostFound();
+        const item = items.find(x => x.id === id);
+        if (item) {
+            item.status = 'Resolved';
+            DB.updateLostFound(item);
+            Utils.showToast('Item marked as resolved.', 'success');
+            renderLostFound();
         }
     };
 

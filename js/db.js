@@ -11,7 +11,9 @@ const DB_KEYS = {
     NOTIFICATIONS: 'hostel_notifications',
     LAUNDRY: 'hostel_laundry',
     VISITORS: 'hostel_visitors',
-    ROOMS: 'hostel_rooms'
+    ROOMS: 'hostel_rooms',
+    PARCELS: 'hostel_parcels',
+    LOST_FOUND: 'hostel_lost_found'
 };
 
 // Initial Dummy Data
@@ -39,8 +41,8 @@ const DB = {
         if (!localStorage.getItem(DB_KEYS.FEES)) {
             // Mock fees data for students
             const dummyFees = [
-                { studentId: 'S001', totalDue: 5000, paid: 2000, history: [{ date: new Date().toISOString(), amount: 2000, method: 'Card' }] },
-                { studentId: 'S002', totalDue: 5000, paid: 5000, history: [{ date: new Date().toISOString(), amount: 5000, method: 'UPI' }] }
+                { studentId: 'S001', totalDue: 5000, paid: 2000, history: [{ date: new Date().toISOString(), amount: 2000, method: 'Card' }], fines: [] },
+                { studentId: 'S002', totalDue: 5000, paid: 5000, history: [{ date: new Date().toISOString(), amount: 5000, method: 'UPI' }], fines: [] }
             ];
             localStorage.setItem(DB_KEYS.FEES, JSON.stringify(dummyFees));
         }
@@ -81,6 +83,12 @@ const DB = {
                 { roomNo: 'C-302', capacity: 3, occupants: [], inventory: { beds: 3, tables: 3, chairs: 3 } }
             ];
             localStorage.setItem(DB_KEYS.ROOMS, JSON.stringify(dummyRooms));
+        }
+        if (!localStorage.getItem(DB_KEYS.PARCELS)) {
+            localStorage.setItem(DB_KEYS.PARCELS, JSON.stringify([]));
+        }
+        if (!localStorage.getItem(DB_KEYS.LOST_FOUND)) {
+            localStorage.setItem(DB_KEYS.LOST_FOUND, JSON.stringify([]));
         }
     },
     
@@ -155,6 +163,18 @@ const DB = {
             feeData.history.push({ date: new Date().toISOString(), amount, method });
             DB.saveFees(fees);
         }
+    },
+    issueFine: (studentId, amount, reason) => {
+        const fees = DB.getFees();
+        let feeData = fees.find(f => f.studentId === studentId);
+        if (!feeData) {
+            feeData = { studentId, totalDue: 0, paid: 0, history: [], fines: [] };
+            fees.push(feeData);
+        }
+        if (!feeData.fines) feeData.fines = [];
+        feeData.totalDue += amount;
+        feeData.fines.push({ date: new Date().toISOString(), amount, reason });
+        DB.saveFees(fees);
     },
 
     // Food Menu
@@ -250,6 +270,40 @@ const DB = {
         if (index !== -1) {
             rooms[index] = updatedRoom;
             DB.saveRooms(rooms);
+        }
+    },
+
+    // Parcels
+    getParcels: () => JSON.parse(localStorage.getItem(DB_KEYS.PARCELS) || '[]'),
+    saveParcels: (parcels) => localStorage.setItem(DB_KEYS.PARCELS, JSON.stringify(parcels)),
+    addParcel: (parcel) => {
+        const parcels = DB.getParcels();
+        parcels.push(parcel);
+        DB.saveParcels(parcels);
+    },
+    updateParcel: (updatedParcel) => {
+        const parcels = DB.getParcels();
+        const index = parcels.findIndex(p => p.id === updatedParcel.id);
+        if (index !== -1) {
+            parcels[index] = updatedParcel;
+            DB.saveParcels(parcels);
+        }
+    },
+
+    // Lost & Found
+    getLostFound: () => JSON.parse(localStorage.getItem(DB_KEYS.LOST_FOUND) || '[]'),
+    saveLostFound: (items) => localStorage.setItem(DB_KEYS.LOST_FOUND, JSON.stringify(items)),
+    addLostFound: (item) => {
+        const items = DB.getLostFound();
+        items.push(item);
+        DB.saveLostFound(items);
+    },
+    updateLostFound: (updatedItem) => {
+        const items = DB.getLostFound();
+        const index = items.findIndex(i => i.id === updatedItem.id);
+        if (index !== -1) {
+            items[index] = updatedItem;
+            DB.saveLostFound(items);
         }
     },
 

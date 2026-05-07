@@ -20,6 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'complaints': document.getElementById('complaintsTab'),
         'laundry': document.getElementById('laundryTab'),
         'notices': document.getElementById('noticesTab'),
+        'parcels': document.getElementById('parcelsTab'),
+        'lostfound': document.getElementById('lostfoundTab'),
         'attendance': document.getElementById('attendanceTab')
     };
 
@@ -46,6 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'complaints') loadComplaints();
             if (tabId === 'laundry') loadLaundry();
             if (tabId === 'notices') loadNotices();
+            if (tabId === 'parcels') loadParcels();
+            if (tabId === 'lostfound') loadLostFound();
             if (tabId === 'attendance') loadAttendance();
         });
     });
@@ -172,6 +176,28 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (history.length === 0) {
             tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;">No payments made yet.</td></tr>';
+        }
+
+        // Fines Table
+        const finesTbody = document.querySelector('#finesTable tbody');
+        const noFinesMsg = document.getElementById('noFinesMsg');
+        if (finesTbody && noFinesMsg) {
+            finesTbody.innerHTML = '';
+            const fines = myFees.fines || [];
+            
+            if (fines.length === 0) {
+                noFinesMsg.style.display = 'block';
+                document.getElementById('finesTable').style.display = 'none';
+            } else {
+                noFinesMsg.style.display = 'none';
+                document.getElementById('finesTable').style.display = 'table';
+                
+                fines.forEach(f => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${Utils.formatDate(f.date)}</td><td>${f.reason}</td><td style="color:var(--danger); font-weight:bold;">₹${f.amount}</td>`;
+                    finesTbody.appendChild(tr);
+                });
+            }
         }
     }
 
@@ -441,6 +467,114 @@ document.addEventListener('DOMContentLoaded', () => {
         DB.markNotificationRead(id);
         loadNotifications();
     };
+
+    // --- Parcels Logic ---
+    function loadParcels() {
+        const tbody = document.querySelector('#studentParcelsTable tbody');
+        const noDataMsg = document.getElementById('noStudentParcelsMsg');
+        if (!tbody) return;
+
+        let parcels = DB.getParcels().filter(p => p.studentId === currentUser.id);
+        parcels.sort((a, b) => new Date(b.dateReceived) - new Date(a.dateReceived));
+
+        tbody.innerHTML = '';
+        if (parcels.length === 0) {
+            noDataMsg.style.display = 'block';
+            document.getElementById('studentParcelsTable').style.display = 'none';
+            return;
+        }
+
+        noDataMsg.style.display = 'none';
+        document.getElementById('studentParcelsTable').style.display = 'table';
+
+        parcels.forEach(p => {
+            const tr = document.createElement('tr');
+            let badgeClass = p.status === 'Delivered' ? 'badge-success' : 'badge-pending';
+            
+            tr.innerHTML = `
+                <td>${Utils.formatDate(p.dateReceived)}</td>
+                <td><strong>${p.trackingNo}</strong></td>
+                <td>${p.courier}</td>
+                <td><span class="badge ${badgeClass}">${p.status}</span></td>
+                <td>${p.dateDelivered ? Utils.formatDate(p.dateDelivered) : '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // --- Lost & Found Logic ---
+    const newLostFoundForm = document.getElementById('newLostFoundForm');
+    if (newLostFoundForm) {
+        newLostFoundForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const type = document.getElementById('lfType').value;
+            const item = document.getElementById('lfItem').value.trim();
+            const location = document.getElementById('lfLocation').value.trim();
+            const description = document.getElementById('lfDesc').value.trim();
+
+            if (!item || !location || !description) return;
+
+            const report = {
+                id: 'LF-' + Date.now(),
+                type,
+                item,
+                location,
+                description,
+                dateReported: new Date().toISOString(),
+                status: 'Active',
+                authorRole: currentUser.role,
+                authorId: currentUser.id,
+                authorName: currentUser.name
+            };
+
+            DB.addLostFound(report);
+            Utils.showToast(`Item reported as ${type}!`, 'success');
+            newLostFoundForm.reset();
+            document.getElementById('newLostFoundModal').classList.remove('show');
+            loadLostFound();
+        });
+    }
+
+    function loadLostFound() {
+        const container = document.getElementById('lostFoundContainer');
+        const noDataMsg = document.getElementById('noLostFoundMsg');
+        if (!container) return;
+
+        let items = DB.getLostFound();
+        items.sort((a, b) => new Date(b.dateReported) - new Date(a.dateReported));
+
+        container.innerHTML = '';
+        if (items.length === 0) {
+            noDataMsg.style.display = 'block';
+            return;
+        }
+
+        noDataMsg.style.display = 'none';
+
+        items.forEach(lf => {
+            let badgeClass = lf.type === 'Lost' ? 'badge-rejected' : 'badge-success';
+            if (lf.status === 'Resolved') badgeClass = 'badge-pending';
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.opacity = lf.status === 'Resolved' ? '0.7' : '1';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                    <span class="badge ${badgeClass}">${lf.type}</span>
+                    <span style="font-size:0.75rem; color:var(--text-secondary);">${Utils.formatDate(lf.dateReported)}</span>
+                </div>
+                <h3 style="margin-top:0; margin-bottom:0.25rem;">${lf.item}</h3>
+                <div style="font-size:0.875rem; margin-bottom:0.5rem; color:var(--text-secondary);">
+                    <i class="ri-map-pin-line"></i> ${lf.location}
+                </div>
+                <p style="font-size:0.875rem; margin-bottom:1rem; flex-grow:1;">${lf.description}</p>
+                <div style="font-size:0.75rem; color:var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                    Reported by: ${lf.authorName} (${lf.authorRole})
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
 
     // Initial load
     loadRequests();

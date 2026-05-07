@@ -43,6 +43,9 @@
                 <a href="#" class="nav-item" data-tab="fees">
                     <i class="ri-wallet-3-line"></i> Manage Fees
                 </a>
+                <a href="#" class="nav-item" data-tab="lostfound">
+                    <i class="ri-search-eye-line"></i> Lost & Found
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="nav-item btn-block" style="background:none;border:none;text-align:left;width:100%" id="logoutBtn">
@@ -272,6 +275,9 @@
                 <div id="feesTab" class="tab-content hidden fade-in">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                         <h1 class="page-title" style="margin: 0;">Manage Fees Status</h1>
+                        <button class="btn btn-danger" onclick="document.getElementById('issueFineModal').classList.add('show')">
+                            <i class="ri-error-warning-line"></i> Issue Fine
+                        </button>
                     </div>
                     
                     <div class="card">
@@ -292,6 +298,23 @@
                                 </tbody>
                             </table>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Lost & Found Tab -->
+                <div id="lostfoundTab" class="tab-content hidden fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1 class="page-title" style="margin: 0;">Lost & Found Board</h1>
+                        <button class="btn btn-primary" onclick="document.getElementById('newLostFoundModal').classList.add('show')">
+                            <i class="ri-add-line"></i> Report Item
+                        </button>
+                    </div>
+
+                    <div id="lostFoundContainer" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                        <!-- Populated via JS -->
+                    </div>
+                    <div id="noLostFoundMsg" style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none; width: 100%;">
+                        No items reported.
                     </div>
                 </div>
 
@@ -414,6 +437,65 @@
                     </select>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Record Payment</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Issue Fine Modal -->
+    <div class="modal-overlay" id="issueFineModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Issue Disciplinary Fine</h3>
+                <button class="modal-close" onclick="closeModal('issueFineModal')"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="issueFineForm">
+                <div class="form-group">
+                    <label for="fineStudentId">Select Student</label>
+                    <select id="fineStudentId" class="form-control" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="fineAmount">Fine Amount (₹)</label>
+                    <input type="number" id="fineAmount" class="form-control" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label for="fineReason">Reason</label>
+                    <input type="text" id="fineReason" class="form-control" placeholder="e.g. Late Entry, Property Damage" required>
+                </div>
+                <button type="submit" class="btn btn-danger btn-block">Issue Fine</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lost & Found Modal -->
+    <div class="modal-overlay" id="newLostFoundModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Report Lost / Found Item</h3>
+                <button class="modal-close" onclick="closeModal('newLostFoundModal')"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="newLostFoundForm">
+                <div class="form-group">
+                    <label for="lfType">Type</label>
+                    <select id="lfType" class="form-control" required>
+                        <option value="Lost">I Lost Something</option>
+                        <option value="Found">I Found Something</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="lfItem">Item Name</label>
+                    <input type="text" id="lfItem" class="form-control" placeholder="e.g. Blue Umbrella, Keys" required>
+                </div>
+                <div class="form-group">
+                    <label for="lfLocation">Location Lost/Found</label>
+                    <input type="text" id="lfLocation" class="form-control" placeholder="e.g. Near Mess, Main Gate" required>
+                </div>
+                <div class="form-group">
+                    <label for="lfDesc">Description / Contact Info</label>
+                    <textarea id="lfDesc" class="form-control" rows="3" required placeholder="Provide details to identify the item..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Submit Report</button>
             </form>
         </div>
     </div>

@@ -21,7 +21,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'attendance': document.getElementById('attendanceTab'),
         'fees': document.getElementById('feesTab'),
         'laundry': document.getElementById('laundryTab'),
-        'rooms': document.getElementById('roomsTab')
+        'rooms': document.getElementById('roomsTab'),
+        'lostfound': document.getElementById('lostfoundTab')
     };
 
     navItems.forEach(item => {
@@ -47,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'fees') renderFees();
             if (tabId === 'laundry') renderLaundry();
             if (tabId === 'rooms') renderRooms();
+            if (tabId === 'lostfound') renderLostFound();
             if (tabId === 'attendance') {
                 document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
                 loadAttendance();
@@ -731,7 +733,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let feeData = allFees.find(f => f.studentId === student.id);
             if (!feeData) {
                 // Initialize default dummy fee structure if not found
-                feeData = { studentId: student.id, totalDue: 5000, paid: 0, history: [] };
+                feeData = { studentId: student.id, totalDue: 5000, paid: 0, history: [], fines: [] };
                 allFees.push(feeData);
                 DB.saveFees(allFees);
             }
@@ -753,6 +755,15 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             tbody.appendChild(tr);
         });
+
+        // Populate fineStudentId select
+        const fineSelect = document.getElementById('fineStudentId');
+        if (fineSelect) {
+            fineSelect.innerHTML = '<option value="">-- Select Student --</option>';
+            students.forEach(student => {
+                fineSelect.innerHTML += `<option value="${student.id}">${student.name} (${student.id})</option>`;
+            });
+        }
     }
 
     window.openPaymentModal = (studentId, studentName, balance) => {
@@ -780,6 +791,123 @@ document.addEventListener('DOMContentLoaded', () => {
         Utils.showToast('Payment recorded successfully!', 'success');
         document.getElementById('recordPaymentModal').classList.remove('show');
         renderFees();
+    };
+
+    // --- Issue Fine Logic ---
+    const issueFineForm = document.getElementById('issueFineForm');
+    if (issueFineForm) {
+        issueFineForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const studentId = document.getElementById('fineStudentId').value;
+            const amount = parseInt(document.getElementById('fineAmount').value, 10);
+            const reason = document.getElementById('fineReason').value.trim();
+
+            if (!studentId || !amount || !reason) return;
+
+            DB.issueFine(studentId, amount, reason);
+            
+            DB.addNotification({
+                userId: studentId,
+                title: 'Disciplinary Fine Issued',
+                message: `You have been fined ₹${amount} for: ${reason}. Please check your fee balance.`,
+                type: 'error'
+            });
+
+            Utils.showToast(`Fine of ₹${amount} issued to ${studentId}.`, 'success');
+            issueFineForm.reset();
+            closeModal('issueFineModal');
+            renderFees();
+        });
+    }
+
+    // --- Lost & Found Logic (Shared across roles, implemented here for Warden) ---
+    const newLostFoundForm = document.getElementById('newLostFoundForm');
+    if (newLostFoundForm) {
+        newLostFoundForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const type = document.getElementById('lfType').value;
+            const item = document.getElementById('lfItem').value.trim();
+            const location = document.getElementById('lfLocation').value.trim();
+            const description = document.getElementById('lfDesc').value.trim();
+
+            if (!item || !location || !description) return;
+
+            const report = {
+                id: 'LF-' + Date.now(),
+                type,
+                item,
+                location,
+                description,
+                dateReported: new Date().toISOString(),
+                status: 'Active',
+                authorRole: currentUser.role,
+                authorId: currentUser.id,
+                authorName: currentUser.name
+            };
+
+            DB.addLostFound(report);
+            Utils.showToast(`Item reported as ${type}!`, 'success');
+            newLostFoundForm.reset();
+            closeModal('newLostFoundModal');
+            renderLostFound();
+        });
+    }
+
+    function renderLostFound() {
+        const container = document.getElementById('lostFoundContainer');
+        const noDataMsg = document.getElementById('noLostFoundMsg');
+        if (!container) return;
+
+        let items = DB.getLostFound();
+        items.sort((a, b) => new Date(b.dateReported) - new Date(a.dateReported));
+
+        container.innerHTML = '';
+        if (items.length === 0) {
+            noDataMsg.style.display = 'block';
+            return;
+        }
+
+        noDataMsg.style.display = 'none';
+
+        items.forEach(lf => {
+            let badgeClass = lf.type === 'Lost' ? 'badge-rejected' : 'badge-success';
+            if (lf.status === 'Resolved') badgeClass = 'badge-pending'; // Grayed out somewhat
+            
+            const actionHtml = (lf.status === 'Active' && (lf.authorId === currentUser.id || currentUser.role === 'warden')) 
+                ? `<button class="btn btn-outline" style="width:100%; margin-top:1rem; padding:0.5rem;" onclick="resolveLostFound('${lf.id}')">Mark as Resolved</button>` 
+                : '';
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.style.opacity = lf.status === 'Resolved' ? '0.7' : '1';
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom: 0.5rem;">
+                    <span class="badge ${badgeClass}">${lf.type}</span>
+                    <span style="font-size:0.75rem; color:var(--text-secondary);">${Utils.formatDate(lf.dateReported)}</span>
+                </div>
+                <h3 style="margin-top:0; margin-bottom:0.25rem;">${lf.item}</h3>
+                <div style="font-size:0.875rem; margin-bottom:0.5rem; color:var(--text-secondary);">
+                    <i class="ri-map-pin-line"></i> ${lf.location}
+                </div>
+                <p style="font-size:0.875rem; margin-bottom:1rem; flex-grow:1;">${lf.description}</p>
+                <div style="font-size:0.75rem; color:var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 0.5rem;">
+                    Reported by: ${lf.authorName} (${lf.authorRole})
+                </div>
+                ${actionHtml}
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    window.resolveLostFound = (id) => {
+        const items = DB.getLostFound();
+        const item = items.find(x => x.id === id);
+        if (item) {
+            item.status = 'Resolved';
+            DB.updateLostFound(item);
+            Utils.showToast('Item marked as resolved.', 'success');
+            renderLostFound();
+        }
     };
 
     // Initial render
