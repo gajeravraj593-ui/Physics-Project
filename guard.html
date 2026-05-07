@@ -27,6 +27,10 @@
                     <i class="ri-qr-scan-2-line"></i>
                     Verify Pass
                 </a>
+                <a href="#" class="nav-item" data-tab="visitors">
+                    <i class="ri-user-add-line"></i>
+                    Visitor Log
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <button class="nav-item btn-block" style="background:none;border:none;text-align:left;width:100%"
@@ -91,8 +95,66 @@
                     </div>
                 </div>
 
+                <!-- Visitors Tab -->
+                <div id="visitorsTab" class="tab-content hidden fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1 class="page-title" style="margin: 0;">Visitor Log</h1>
+                        <button class="btn btn-primary" onclick="document.getElementById('newVisitorModal').classList.add('show')">
+                            <i class="ri-add-line"></i> Log Visitor
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="visitorsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Visiting</th>
+                                        <th>Purpose</th>
+                                        <th>Time In</th>
+                                        <th>Time Out</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                            <div id="noVisitorsMsg" style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                                No active visitors.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
+    </div>
+
+    <!-- New Visitor Modal -->
+    <div class="modal-overlay" id="newVisitorModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Log New Visitor</h3>
+                <button class="modal-close" onclick="document.getElementById('newVisitorModal').classList.remove('show')"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="newVisitorForm">
+                <div class="form-group">
+                    <label for="visitorName">Visitor Name</label>
+                    <input type="text" id="visitorName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="visitingStudent">Visiting Student (ID)</label>
+                    <input type="text" id="visitingStudent" class="form-control" placeholder="e.g. S001" required>
+                </div>
+                <div class="form-group">
+                    <label for="visitorPurpose">Purpose of Visit</label>
+                    <input type="text" id="visitorPurpose" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Log Entry</button>
+            </form>
+        </div>
     </div>
 
     <div id="toastContainer" class="toast-container"></div>

@@ -19,7 +19,9 @@ document.addEventListener('DOMContentLoaded', () => {
         'food': document.getElementById('foodTab'),
         'notices': document.getElementById('noticesTab'),
         'attendance': document.getElementById('attendanceTab'),
-        'fees': document.getElementById('feesTab')
+        'fees': document.getElementById('feesTab'),
+        'laundry': document.getElementById('laundryTab'),
+        'rooms': document.getElementById('roomsTab')
     };
 
     navItems.forEach(item => {
@@ -43,6 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'food') loadWardenFoodMenu();
             if (tabId === 'notices') renderNotices();
             if (tabId === 'fees') renderFees();
+            if (tabId === 'laundry') renderLaundry();
+            if (tabId === 'rooms') renderRooms();
             if (tabId === 'attendance') {
                 document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
                 loadAttendance();
@@ -243,20 +247,33 @@ document.addEventListener('DOMContentLoaded', () => {
         let badgeClass = cmp.status === 'Resolved' ? 'badge-approved' : 'badge-pending';
 
         let actionHtml = '';
-        if (cmp.status === 'Pending') {
+        if (cmp.status !== 'Resolved') {
             actionHtml = `
                 <div class="form-group" style="margin-top: 1.5rem;">
-                    <label for="cmpRemarks">Resolution Remarks</label>
-                    <textarea id="cmpRemarks" class="form-control" rows="3" placeholder="How was this resolved?"></textarea>
+                    <label for="cmpAssign">Assign To</label>
+                    <select id="cmpAssign" class="form-control">
+                        <option value="">-- Select Staff --</option>
+                        <option value="Electrician" ${cmp.assignedTo === 'Electrician' ? 'selected' : ''}>Electrician</option>
+                        <option value="Plumber" ${cmp.assignedTo === 'Plumber' ? 'selected' : ''}>Plumber</option>
+                        <option value="Cleaner" ${cmp.assignedTo === 'Cleaner' ? 'selected' : ''}>Cleaner</option>
+                        <option value="IT Support" ${cmp.assignedTo === 'IT Support' ? 'selected' : ''}>IT Support</option>
+                        <option value="Other" ${cmp.assignedTo === 'Other' ? 'selected' : ''}>Other</option>
+                    </select>
                 </div>
-                <div style="margin-top: 1rem;">
-                    <button class="btn btn-success btn-block" onclick="resolveComplaint()"><i class="ri-check-double-line"></i> Mark as Resolved</button>
+                <div class="form-group">
+                    <label for="cmpRemarks">Resolution/Update Remarks</label>
+                    <textarea id="cmpRemarks" class="form-control" rows="3" placeholder="How is this being handled?">${cmp.remarks || ''}</textarea>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 1rem;">
+                    <button class="btn btn-primary" style="flex:1;" onclick="updateComplaintStatus('In Progress')"><i class="ri-loader-line"></i> Mark In Progress</button>
+                    <button class="btn btn-success" style="flex:1;" onclick="updateComplaintStatus('Resolved')"><i class="ri-check-double-line"></i> Mark as Resolved</button>
                 </div>
             `;
         } else {
             actionHtml = `
                 <div style="margin-top: 1.5rem;">
                     <strong style="display:block; margin-bottom:0.5rem; color:var(--success);">Resolution Details:</strong>
+                    ${cmp.assignedTo ? `<div style="font-size:0.875rem; margin-bottom:0.5rem;">Assigned to: <strong>${cmp.assignedTo}</strong></div>` : ''}
                     <p style="background:var(--bg-main); padding:0.75rem; border-radius:var(--radius); margin:0;">${cmp.remarks || 'No remarks provided.'}</p>
                 </div>
             `;
@@ -276,31 +293,241 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('reviewComplaintModal').classList.add('show');
     };
 
-    window.resolveComplaint = () => {
+    window.updateComplaintStatus = (status) => {
         if (!currentComplaintIdToReview) return;
         const remarksInput = document.getElementById('cmpRemarks');
+        const assignSelect = document.getElementById('cmpAssign');
         
         const complaints = DB.getComplaints();
         const cmp = complaints.find(c => c.id === currentComplaintIdToReview);
         if (cmp) {
-            cmp.status = 'Resolved';
+            cmp.status = status;
             cmp.remarks = remarksInput ? remarksInput.value.trim() : '';
+            if (assignSelect) cmp.assignedTo = assignSelect.value;
             DB.updateComplaint(cmp);
 
             // Notify student
             DB.addNotification({
                 userId: cmp.studentId,
-                title: 'Complaint Resolved',
-                message: `Your complaint regarding "${cmp.title}" has been resolved.`,
-                type: 'success'
+                title: `Complaint ${status}`,
+                message: `Your complaint regarding "${cmp.title}" has been marked as ${status}.`,
+                type: status === 'Resolved' ? 'success' : 'info'
             });
 
-            Utils.showToast('Complaint resolved!', 'success');
+            Utils.showToast(`Complaint updated to ${status}!`, 'success');
         }
         
         closeModal('reviewComplaintModal');
         renderComplaints();
     };
+
+    // --- Laundry Logic ---
+    let currentLaundryIdToReview = null;
+
+    function renderLaundry() {
+        const tbody = document.querySelector('#wardenLaundryTable tbody');
+        if (!tbody) return;
+
+        let laundry = DB.getLaundry();
+        laundry.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        tbody.innerHTML = '';
+        if (laundry.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 2rem;">No laundry batches found.</td></tr>';
+            return;
+        }
+
+        laundry.forEach(batch => {
+            const tr = document.createElement('tr');
+            let badgeClass = 'badge-pending';
+            if (batch.status === 'Ready') badgeClass = 'badge-approved';
+            if (batch.status === 'Delivered') badgeClass = 'badge-approved'; // Maybe a different color for delivered, but using existing classes
+            if (batch.status === 'Delivered') badgeClass = 'badge-success';
+
+            tr.innerHTML = `
+                <td><strong>${batch.id}</strong></td>
+                <td>${Utils.formatDate(batch.date)}</td>
+                <td>
+                    <div style="font-weight: 500;">${batch.studentName}</div>
+                    <div style="font-size: 0.75rem; color: var(--text-secondary);">Room: ${batch.room}</div>
+                </td>
+                <td>${batch.totalItems}</td>
+                <td><span class="badge ${badgeClass}">${batch.status}</span></td>
+                <td>
+                    <button class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="reviewLaundry('${batch.id}')">
+                        Update Status
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.reviewLaundry = (id) => {
+        const batch = DB.getLaundry().find(l => l.id === id);
+        if (!batch) return;
+
+        currentLaundryIdToReview = id;
+        const modalBody = document.getElementById('laundryModalBody');
+        
+        let badgeClass = 'badge-pending';
+        if (batch.status === 'Ready' || batch.status === 'Delivered') badgeClass = 'badge-approved';
+
+        modalBody.innerHTML = `
+            <div style="display:grid; gap: 1rem;">
+                <div style="display:flex; justify-content: space-between;">
+                    <div><strong>Batch ID:</strong> <span>${batch.id}</span></div>
+                    <span class="badge ${badgeClass}">${batch.status}</span>
+                </div>
+                <div><strong>Student:</strong> ${batch.studentName} (Room: ${batch.room})</div>
+                <hr style="border-top: 1px solid var(--border-color); margin: 0.5rem 0;">
+                <div style="display:flex; justify-content: space-between;"><span>Shirts:</span> <strong>${batch.items.shirts}</strong></div>
+                <div style="display:flex; justify-content: space-between;"><span>Pants:</span> <strong>${batch.items.pants}</strong></div>
+                <div style="display:flex; justify-content: space-between;"><span>Undergarments:</span> <strong>${batch.items.undergarments}</strong></div>
+                <div style="display:flex; justify-content: space-between;"><span>Bedsheets:</span> <strong>${batch.items.bedsheets}</strong></div>
+                <div style="display:flex; justify-content: space-between;"><strong>Total Items:</strong> <strong>${batch.totalItems}</strong></div>
+                ${batch.notes ? `<div><strong style="display:block;">Notes:</strong><p style="background:var(--bg-main); padding:0.75rem; border-radius:var(--radius); margin-top:0.5rem;">${batch.notes}</p></div>` : ''}
+                
+                <div class="form-group" style="margin-top: 1rem;">
+                    <label>Update Status</label>
+                    <select id="laundryStatusSelect" class="form-control">
+                        <option value="Received" ${batch.status === 'Received' ? 'selected' : ''}>Received</option>
+                        <option value="Washing" ${batch.status === 'Washing' ? 'selected' : ''}>Washing</option>
+                        <option value="Ironing" ${batch.status === 'Ironing' ? 'selected' : ''}>Ironing</option>
+                        <option value="Ready" ${batch.status === 'Ready' ? 'selected' : ''}>Ready for Pickup</option>
+                        <option value="Delivered" ${batch.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary btn-block" onclick="updateLaundryStatus()">Save Status</button>
+            </div>
+        `;
+        document.getElementById('reviewLaundryModal').classList.add('show');
+    };
+
+    window.updateLaundryStatus = () => {
+        if (!currentLaundryIdToReview) return;
+        const newStatus = document.getElementById('laundryStatusSelect').value;
+        const laundryList = DB.getLaundry();
+        const batch = laundryList.find(l => l.id === currentLaundryIdToReview);
+        
+        if (batch) {
+            batch.status = newStatus;
+            DB.updateLaundry(batch);
+
+            // Notify student
+            DB.addNotification({
+                userId: batch.studentId,
+                title: `Laundry Status: ${newStatus}`,
+                message: `Your laundry batch (${batch.totalItems} items) is now: ${newStatus}.`,
+                type: 'info'
+            });
+
+            Utils.showToast('Laundry status updated', 'success');
+        }
+        closeModal('reviewLaundryModal');
+        renderLaundry();
+    };
+
+    // --- Rooms Logic ---
+    function renderRooms() {
+        const tbody = document.querySelector('#wardenRoomsTable tbody');
+        if (!tbody) return;
+
+        const rooms = DB.getRooms();
+        const users = DB.getUsers();
+
+        tbody.innerHTML = '';
+        rooms.forEach(room => {
+            const tr = document.createElement('tr');
+            const availableBeds = room.capacity - room.occupants.length;
+            
+            // Get names of occupants
+            const occupantNames = room.occupants.map(id => {
+                const u = users.find(user => user.id === id);
+                return u ? u.name : id;
+            }).join(', ');
+
+            tr.innerHTML = `
+                <td><strong>${room.roomNo}</strong></td>
+                <td>${room.capacity}</td>
+                <td>${occupantNames || '<span style="color:var(--text-secondary)">Empty</span>'}</td>
+                <td style="color: ${availableBeds > 0 ? 'var(--success)' : 'var(--danger)'}; font-weight: bold;">${availableBeds}</td>
+                <td>
+                    <button class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="openAssignRoomModal('${room.roomNo}')" ${availableBeds === 0 ? 'disabled' : ''}>
+                        Assign Student
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.openAssignRoomModal = (roomNo) => {
+        const assignStudentId = document.getElementById('assignStudentId');
+        const assignRoomNo = document.getElementById('assignRoomNo');
+        
+        const students = DB.getUsers().filter(u => u.role === 'student');
+        const rooms = DB.getRooms();
+
+        // Populate students dropdown
+        assignStudentId.innerHTML = '<option value="">-- Select Student --</option>';
+        students.forEach(student => {
+            assignStudentId.innerHTML += `<option value="${student.id}">${student.name} (${student.id}) - Current: ${student.room || 'None'}</option>`;
+        });
+
+        // Populate rooms dropdown
+        assignRoomNo.innerHTML = '';
+        rooms.forEach(room => {
+            const availableBeds = room.capacity - room.occupants.length;
+            if (availableBeds > 0 || room.roomNo === roomNo) {
+                assignRoomNo.innerHTML += `<option value="${room.roomNo}" ${room.roomNo === roomNo ? 'selected' : ''}>${room.roomNo} (${availableBeds} beds available)</option>`;
+            }
+        });
+
+        document.getElementById('assignRoomModal').classList.add('show');
+    };
+
+    const assignRoomForm = document.getElementById('assignRoomForm');
+    if (assignRoomForm) {
+        assignRoomForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const studentId = document.getElementById('assignStudentId').value;
+            const roomNo = document.getElementById('assignRoomNo').value;
+            
+            if (!studentId || !roomNo) return;
+
+            const users = DB.getUsers();
+            const studentIndex = users.findIndex(u => u.id === studentId);
+            const rooms = DB.getRooms();
+            const targetRoomIndex = rooms.findIndex(r => r.roomNo === roomNo);
+
+            if (studentIndex !== -1 && targetRoomIndex !== -1) {
+                const student = users[studentIndex];
+                const oldRoomNo = student.room;
+
+                // Remove from old room if applicable
+                if (oldRoomNo) {
+                    const oldRoomIndex = rooms.findIndex(r => r.roomNo === oldRoomNo);
+                    if (oldRoomIndex !== -1) {
+                        rooms[oldRoomIndex].occupants = rooms[oldRoomIndex].occupants.filter(id => id !== studentId);
+                        DB.updateRoom(rooms[oldRoomIndex]);
+                    }
+                }
+
+                // Add to new room
+                rooms[targetRoomIndex].occupants.push(studentId);
+                DB.updateRoom(rooms[targetRoomIndex]);
+
+                // Update student profile
+                student.room = roomNo;
+                localStorage.setItem('gatepass_users', JSON.stringify(users)); // Saving directly to DB_KEYS.USERS equivalent
+
+                Utils.showToast(`Assigned ${student.name} to ${roomNo}`, 'success');
+                closeModal('assignRoomModal');
+                renderRooms();
+            }
+        });
+    }
 
     // --- Modal Shared Logic ---
     window.closeModal = (modalId) => {

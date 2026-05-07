@@ -27,6 +27,9 @@
                 <a href="#" class="nav-item" data-tab="food">
                     <i class="ri-restaurant-line"></i> Food Menu
                 </a>
+                <a href="#" class="nav-item" data-tab="laundry">
+                    <i class="ri-t-shirt-line"></i> Laundry
+                </a>
                 <a href="#" class="nav-item" data-tab="fees">
                     <i class="ri-wallet-3-line"></i> Fees Payment
                 </a>
@@ -127,6 +130,38 @@
                                     <!-- Populated via JS -->
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Laundry Tab -->
+                <div id="laundryTab" class="tab-content hidden fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1 class="page-title" style="margin: 0;">My Laundry</h1>
+                        <button class="btn btn-primary" onclick="document.getElementById('applyLaundryModal').classList.add('show')">
+                            <i class="ri-add-line"></i> New Batch
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="laundryTable">
+                                <thead>
+                                    <tr>
+                                        <th>Batch ID</th>
+                                        <th>Date</th>
+                                        <th>Total Items</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                            <div id="noLaundryMsg" style="text-align: center; padding: 2rem; color: var(--text-secondary); display: none;">
+                                No laundry batches found.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -276,6 +311,41 @@
                         placeholder="Please specify the reason in detail..." required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary btn-block">Submit Request</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Apply Laundry Modal -->
+    <div class="modal-overlay" id="applyLaundryModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Submit Laundry Batch</h3>
+                <button class="modal-close"
+                    onclick="document.getElementById('applyLaundryModal').classList.remove('show')"><i
+                        class="ri-close-line"></i></button>
+            </div>
+            <form id="applyLaundryForm">
+                <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label for="laundryShirts">Shirts / T-Shirts</label>
+                    <input type="number" id="laundryShirts" class="form-control" style="width:100px;" min="0" value="0">
+                </div>
+                <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label for="laundryPants">Pants / Shorts</label>
+                    <input type="number" id="laundryPants" class="form-control" style="width:100px;" min="0" value="0">
+                </div>
+                <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label for="laundryUndergarments">Undergarments</label>
+                    <input type="number" id="laundryUndergarments" class="form-control" style="width:100px;" min="0" value="0">
+                </div>
+                <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+                    <label for="laundryBedsheets">Bedsheets / Towels</label>
+                    <input type="number" id="laundryBedsheets" class="form-control" style="width:100px;" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label for="laundryNotes">Additional Notes</label>
+                    <input type="text" id="laundryNotes" class="form-control" placeholder="e.g. Wash white clothes separately">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Submit Batch</button>
             </form>
         </div>
     </div>

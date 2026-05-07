@@ -28,6 +28,12 @@
                 <a href="#" class="nav-item" data-tab="food">
                     <i class="ri-restaurant-line"></i> Manage Food Menu
                 </a>
+                <a href="#" class="nav-item" data-tab="laundry">
+                    <i class="ri-t-shirt-line"></i> Laundry Management
+                </a>
+                <a href="#" class="nav-item" data-tab="rooms">
+                    <i class="ri-layout-masonry-line"></i> Room Allocation
+                </a>
                 <a href="#" class="nav-item" data-tab="notices">
                     <i class="ri-notification-badge-line"></i> Notice Board
                 </a>
@@ -163,6 +169,58 @@
                     </div>
                 </div>
 
+                <!-- Laundry Tab -->
+                <div id="laundryTab" class="tab-content hidden fade-in">
+                    <h1 class="page-title">Manage Laundry</h1>
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="wardenLaundryTable">
+                                <thead>
+                                    <tr>
+                                        <th>Batch ID</th>
+                                        <th>Date</th>
+                                        <th>Student</th>
+                                        <th>Total Items</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rooms Tab -->
+                <div id="roomsTab" class="tab-content hidden fade-in">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                        <h1 class="page-title" style="margin: 0;">Room Allocation</h1>
+                        <button class="btn btn-primary" onclick="document.getElementById('assignRoomModal').classList.add('show')">
+                            <i class="ri-add-line"></i> Assign Room
+                        </button>
+                    </div>
+                    <div class="card">
+                        <div class="table-container">
+                            <table id="wardenRoomsTable">
+                                <thead>
+                                    <tr>
+                                        <th>Room No</th>
+                                        <th>Capacity</th>
+                                        <th>Occupants</th>
+                                        <th>Available Beds</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Populated via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Notices Tab -->
                 <div id="noticesTab" class="tab-content hidden fade-in">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
@@ -264,6 +322,44 @@
             <div id="complaintModalBody">
                 <!-- Content injected by JS -->
             </div>
+        </div>
+    </div>
+
+    <!-- Review Laundry Modal -->
+    <div class="modal-overlay" id="reviewLaundryModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Update Laundry Status</h3>
+                <button class="modal-close" onclick="closeModal('reviewLaundryModal')"><i class="ri-close-line"></i></button>
+            </div>
+            <div id="laundryModalBody">
+                <!-- Content injected by JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign Room Modal -->
+    <div class="modal-overlay" id="assignRoomModal">
+        <div class="card modal-content">
+            <div class="modal-header">
+                <h3>Assign Student to Room</h3>
+                <button class="modal-close" onclick="closeModal('assignRoomModal')"><i class="ri-close-line"></i></button>
+            </div>
+            <form id="assignRoomForm">
+                <div class="form-group">
+                    <label for="assignStudentId">Select Student</label>
+                    <select id="assignStudentId" class="form-control" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="assignRoomNo">Select Room</label>
+                    <select id="assignRoomNo" class="form-control" required>
+                        <!-- Populated by JS -->
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Assign</button>
+            </form>
         </div>
     </div>
 

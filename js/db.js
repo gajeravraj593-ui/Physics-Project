@@ -8,7 +8,10 @@ const DB_KEYS = {
     FOOD_MENU: 'hostel_food_menu',
     NOTICES: 'hostel_notices',
     ATTENDANCE: 'hostel_attendance',
-    NOTIFICATIONS: 'hostel_notifications'
+    NOTIFICATIONS: 'hostel_notifications',
+    LAUNDRY: 'hostel_laundry',
+    VISITORS: 'hostel_visitors',
+    ROOMS: 'hostel_rooms'
 };
 
 // Initial Dummy Data
@@ -64,6 +67,20 @@ const DB = {
         }
         if (!localStorage.getItem(DB_KEYS.NOTIFICATIONS)) {
             localStorage.setItem(DB_KEYS.NOTIFICATIONS, JSON.stringify([]));
+        }
+        if (!localStorage.getItem(DB_KEYS.LAUNDRY)) {
+            localStorage.setItem(DB_KEYS.LAUNDRY, JSON.stringify([]));
+        }
+        if (!localStorage.getItem(DB_KEYS.VISITORS)) {
+            localStorage.setItem(DB_KEYS.VISITORS, JSON.stringify([]));
+        }
+        if (!localStorage.getItem(DB_KEYS.ROOMS)) {
+            const dummyRooms = [
+                { roomNo: 'A-101', capacity: 2, occupants: ['S001'], inventory: { beds: 2, tables: 2, chairs: 2 } },
+                { roomNo: 'B-205', capacity: 2, occupants: ['S002'], inventory: { beds: 2, tables: 2, chairs: 2 } },
+                { roomNo: 'C-302', capacity: 3, occupants: [], inventory: { beds: 3, tables: 3, chairs: 3 } }
+            ];
+            localStorage.setItem(DB_KEYS.ROOMS, JSON.stringify(dummyRooms));
         }
     },
     
@@ -187,6 +204,52 @@ const DB = {
         if (n) {
             n.read = true;
             localStorage.setItem(DB_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+        }
+    },
+
+    // Laundry
+    getLaundry: () => JSON.parse(localStorage.getItem(DB_KEYS.LAUNDRY) || '[]'),
+    saveLaundry: (laundry) => localStorage.setItem(DB_KEYS.LAUNDRY, JSON.stringify(laundry)),
+    addLaundry: (batch) => {
+        const laundry = DB.getLaundry();
+        laundry.push(batch);
+        DB.saveLaundry(laundry);
+    },
+    updateLaundry: (updatedBatch) => {
+        const laundry = DB.getLaundry();
+        const index = laundry.findIndex(l => l.id === updatedBatch.id);
+        if (index !== -1) {
+            laundry[index] = updatedBatch;
+            DB.saveLaundry(laundry);
+        }
+    },
+
+    // Visitors
+    getVisitors: () => JSON.parse(localStorage.getItem(DB_KEYS.VISITORS) || '[]'),
+    saveVisitors: (visitors) => localStorage.setItem(DB_KEYS.VISITORS, JSON.stringify(visitors)),
+    addVisitor: (visitor) => {
+        const visitors = DB.getVisitors();
+        visitors.push(visitor);
+        DB.saveVisitors(visitors);
+    },
+    updateVisitor: (updatedVisitor) => {
+        const visitors = DB.getVisitors();
+        const index = visitors.findIndex(v => v.id === updatedVisitor.id);
+        if (index !== -1) {
+            visitors[index] = updatedVisitor;
+            DB.saveVisitors(visitors);
+        }
+    },
+
+    // Rooms
+    getRooms: () => JSON.parse(localStorage.getItem(DB_KEYS.ROOMS) || '[]'),
+    saveRooms: (rooms) => localStorage.setItem(DB_KEYS.ROOMS, JSON.stringify(rooms)),
+    updateRoom: (updatedRoom) => {
+        const rooms = DB.getRooms();
+        const index = rooms.findIndex(r => r.roomNo === updatedRoom.roomNo);
+        if (index !== -1) {
+            rooms[index] = updatedRoom;
+            DB.saveRooms(rooms);
         }
     },
 

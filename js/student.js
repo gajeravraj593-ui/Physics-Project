@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
         'food': document.getElementById('foodTab'),
         'fees': document.getElementById('feesTab'),
         'complaints': document.getElementById('complaintsTab'),
+        'laundry': document.getElementById('laundryTab'),
         'notices': document.getElementById('noticesTab'),
         'attendance': document.getElementById('attendanceTab')
     };
@@ -43,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabId === 'food') loadFoodMenu();
             if (tabId === 'fees') loadFees();
             if (tabId === 'complaints') loadComplaints();
+            if (tabId === 'laundry') loadLaundry();
             if (tabId === 'notices') loadNotices();
             if (tabId === 'attendance') loadAttendance();
         });
@@ -228,6 +230,107 @@ document.addEventListener('DOMContentLoaded', () => {
             tbody.appendChild(tr);
         });
     }
+
+    // --- Laundry Logic ---
+    const applyLaundryForm = document.getElementById('applyLaundryForm');
+    if (applyLaundryForm) {
+        applyLaundryForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const shirts = parseInt(document.getElementById('laundryShirts').value) || 0;
+            const pants = parseInt(document.getElementById('laundryPants').value) || 0;
+            const undergarments = parseInt(document.getElementById('laundryUndergarments').value) || 0;
+            const bedsheets = parseInt(document.getElementById('laundryBedsheets').value) || 0;
+            const notes = document.getElementById('laundryNotes').value;
+            
+            const totalItems = shirts + pants + undergarments + bedsheets;
+            if (totalItems === 0) {
+                Utils.showToast('Please add at least one item.', 'error');
+                return;
+            }
+
+            const newBatch = {
+                id: 'LND-' + Math.floor(Math.random() * 100000),
+                studentId: currentUser.id,
+                studentName: currentUser.name,
+                room: currentUser.room,
+                date: new Date().toISOString(),
+                items: { shirts, pants, undergarments, bedsheets },
+                totalItems,
+                notes,
+                status: 'Received',
+            };
+
+            DB.addLaundry(newBatch);
+            Utils.showToast('Laundry batch submitted!', 'success');
+            applyLaundryForm.reset();
+            document.getElementById('applyLaundryModal').classList.remove('show');
+            loadLaundry();
+        });
+    }
+
+    function loadLaundry() {
+        const tbody = document.querySelector('#laundryTable tbody');
+        const noDataMsg = document.getElementById('noLaundryMsg');
+        if (!tbody) return;
+
+        const laundry = DB.getLaundry().filter(l => l.studentId === currentUser.id);
+
+        tbody.innerHTML = '';
+        if (laundry.length === 0) {
+            noDataMsg.style.display = 'block';
+            if (document.getElementById('laundryTable')) document.getElementById('laundryTable').style.display = 'none';
+            return;
+        }
+
+        noDataMsg.style.display = 'none';
+        if (document.getElementById('laundryTable')) document.getElementById('laundryTable').style.display = 'table';
+        laundry.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        laundry.forEach(batch => {
+            const tr = document.createElement('tr');
+            let badgeClass = 'badge-pending';
+            if (batch.status === 'Ready') badgeClass = 'badge-approved';
+            if (batch.status === 'Delivered') badgeClass = 'badge-approved';
+
+            tr.innerHTML = `
+                <td><strong>${batch.id}</strong></td>
+                <td>${Utils.formatDate(batch.date)}</td>
+                <td>${batch.totalItems}</td>
+                <td><span class="badge ${badgeClass}">${batch.status}</span></td>
+                <td><button class="btn btn-outline" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="viewLaundryDetails('${batch.id}')">View</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.viewLaundryDetails = (id) => {
+        const batch = DB.getLaundry().find(l => l.id === id);
+        if (!batch) return;
+        const modalBody = document.getElementById('modalBody'); // Reusing pass modal
+        let badgeClass = 'badge-pending';
+        if (batch.status === 'Ready' || batch.status === 'Delivered') badgeClass = 'badge-approved';
+
+        modalBody.innerHTML = `
+            <div style="display:grid; gap: 1rem;">
+                <div style="display:flex; justify-content: space-between;"><strong>Batch ID:</strong> <span>${batch.id}</span></div>
+                <div style="display:flex; justify-content: space-between;"><strong>Status:</strong> <span class="badge ${badgeClass}">${batch.status}</span></div>
+                <div style="display:flex; justify-content: space-between;"><strong>Date:</strong> <span>${Utils.formatDate(batch.date)}</span></div>
+                <hr style="border-top: 1px solid var(--border-color);">
+                <h4>Items Breakdown</h4>
+                <div style="display:flex; justify-content: space-between;"><span>Shirts/T-Shirts:</span> <strong>${batch.items.shirts}</strong></div>
+                <div style="display:flex; justify-content: space-between;"><span>Pants/Shorts:</span> <strong>${batch.items.pants}</strong></div>
+                <div style="display:flex; justify-content: space-between;"><span>Undergarments:</span> <strong>${batch.items.undergarments}</strong></div>
+                <div style="display:flex; justify-content: space-between;"><span>Bedsheets/Towels:</span> <strong>${batch.items.bedsheets}</strong></div>
+                <hr style="border-top: 1px solid var(--border-color);">
+                <div style="display:flex; justify-content: space-between;"><strong>Total Items:</strong> <strong>${batch.totalItems}</strong></div>
+                ${batch.notes ? `<div><strong style="display:block;">Notes:</strong><p style="background:var(--bg-main); padding:0.75rem; border-radius:var(--radius); margin-top:0.5rem;">${batch.notes}</p></div>` : ''}
+            </div>
+        `;
+        // update the title of the modal
+        const modalHeader = document.querySelector('#passModal h3');
+        if(modalHeader) modalHeader.textContent = 'Laundry Details';
+        document.getElementById('passModal').classList.add('show'); 
+    };
 
     // --- Food Menu Logic ---
     function loadFoodMenu() {

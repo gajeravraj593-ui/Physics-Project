@@ -14,7 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Tab Navigation
     const navItems = document.querySelectorAll('.sidebar-nav .nav-item');
     const tabs = {
-        'verify': document.getElementById('verifyTab')
+        'verify': document.getElementById('verifyTab'),
+        'visitors': document.getElementById('visitorsTab')
     };
 
     navItems.forEach(item => {
@@ -34,6 +35,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (window.innerWidth <= 768) {
                 sidebar.classList.remove('show');
             }
+
+            if (tabId === 'visitors') renderVisitors();
         });
     });
 
@@ -193,6 +196,91 @@ document.addEventListener('DOMContentLoaded', () => {
         DB.updatePass(currentPass);
         renderVerificationCard(currentPass);
         document.getElementById('passIdInput').value = '';
+    };
+
+    // --- Visitor Logic ---
+    const newVisitorForm = document.getElementById('newVisitorForm');
+    if (newVisitorForm) {
+        newVisitorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('visitorName').value.trim();
+            const visiting = document.getElementById('visitingStudent').value.trim();
+            const purpose = document.getElementById('visitorPurpose').value.trim();
+
+            if (!name || !visiting || !purpose) return;
+
+            const newVisitor = {
+                id: 'VIS-' + Math.floor(Math.random() * 100000),
+                name,
+                visiting,
+                purpose,
+                timeIn: new Date().toISOString(),
+                timeOut: null
+            };
+
+            DB.addVisitor(newVisitor);
+            Utils.showToast('Visitor logged successfully!', 'success');
+            newVisitorForm.reset();
+            document.getElementById('newVisitorModal').classList.remove('show');
+            renderVisitors();
+        });
+    }
+
+    function renderVisitors() {
+        const tbody = document.querySelector('#visitorsTable tbody');
+        const noDataMsg = document.getElementById('noVisitorsMsg');
+        if (!tbody) return;
+
+        let visitors = DB.getVisitors();
+        
+        // Show active visitors (timeOut is null) first, then recently exited
+        visitors.sort((a, b) => {
+            if (!a.timeOut && b.timeOut) return -1;
+            if (a.timeOut && !b.timeOut) return 1;
+            return new Date(b.timeIn) - new Date(a.timeIn);
+        });
+
+        tbody.innerHTML = '';
+        if (visitors.length === 0) {
+            noDataMsg.style.display = 'block';
+            document.getElementById('visitorsTable').style.display = 'none';
+            return;
+        }
+
+        noDataMsg.style.display = 'none';
+        document.getElementById('visitorsTable').style.display = 'table';
+
+        visitors.forEach(v => {
+            const tr = document.createElement('tr');
+            
+            let actionHtml = '';
+            if (!v.timeOut) {
+                actionHtml = `<button class="btn btn-warning" style="padding: 0.25rem 0.5rem; font-size: 0.75rem;" onclick="markVisitorOut('${v.id}')">Mark Out</button>`;
+            } else {
+                actionHtml = `<span class="badge badge-success">Completed</span>`;
+            }
+
+            tr.innerHTML = `
+                <td><strong>${v.name}</strong></td>
+                <td>${v.visiting}</td>
+                <td>${v.purpose}</td>
+                <td>${Utils.formatDate(v.timeIn)}</td>
+                <td>${v.timeOut ? Utils.formatDate(v.timeOut) : '-'}</td>
+                <td>${actionHtml}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    window.markVisitorOut = (id) => {
+        const visitors = DB.getVisitors();
+        const v = visitors.find(vis => vis.id === id);
+        if (v) {
+            v.timeOut = new Date().toISOString();
+            DB.updateVisitor(v);
+            Utils.showToast(`${v.name} marked OUT.`, 'success');
+            renderVisitors();
+        }
     };
 
 });
